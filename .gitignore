@@ -1,0 +1,13 @@
+# Never put credentials, scratch data or emitted logs in this public repository.
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.env
+*.pem
+*.key
+*token*
+scratch/
+output/
+# Candidate source must stay outside public control Git history.
+/bootstrap/source.bundle

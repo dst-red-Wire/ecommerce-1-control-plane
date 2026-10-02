@@ -1,0 +1,84 @@
+name: Bootstrap publisher
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ecommerce-1-bootstrap-publisher
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.actor == 'myname37' && github.triggering_actor == 'myname37'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: ecommerce-1-bootstrap-publisher
+    env:
+      GIT_CONFIG_NOSYSTEM: "1"
+      GIT_CONFIG_GLOBAL: /dev/null
+      GIT_CONFIG_SYSTEM: /dev/null
+      GIT_CONFIG_COUNT: "0"
+      GIT_TEMPLATE_DIR: /dev/null
+      GIT_TERMINAL_PROMPT: "0"
+      GIT_NO_REPLACE_OBJECTS: "1"
+      GIT_LFS_SKIP_SMUDGE: "1"
+    steps:
+      - name: Check approved control identity
+        shell: bash
+        env:
+          APPROVED_CONTROL_SHA: ${{ vars.APPROVED_CONTROL_SHA }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_REPOSITORY" = dst-red-Wire/ecommerce-1-control-plane
+          test "$GITHUB_REF" = refs/heads/main
+          test "$GITHUB_REF_PROTECTED" = true
+          test "$GITHUB_ACTOR" = myname37
+          test "$GITHUB_TRIGGERING_ACTOR" = myname37
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          [[ "$APPROVED_CONTROL_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$APPROVED_CONTROL_SHA"
+          test "$GITHUB_WORKFLOW_SHA" = "$APPROVED_CONTROL_SHA"
+          export HOME="$RUNNER_TEMP/bootstrap-home"
+          export XDG_CONFIG_HOME="$HOME"
+          mkdir -m 700 -p "$HOME"
+          echo "HOME=$HOME" >> "$GITHUB_ENV"
+          echo "XDG_CONFIG_HOME=$XDG_CONFIG_HOME" >> "$GITHUB_ENV"
+      - name: Fetch approved control and public target base
+        shell: bash
+        env:
+          APPROVED_CONTROL_SHA: ${{ vars.APPROVED_CONTROL_SHA }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/bootstrap-trusted"
+          mkdir -m 700 -p "$work"
+          git init -q "$work/control"
+          timeout 60s git -C "$work/control" -c core.hooksPath=/dev/null fetch --quiet --no-tags --depth=1 https://github.com/dst-red-Wire/ecommerce-1-control-plane.git refs/heads/main
+          test "$(git -C "$work/control" rev-parse FETCH_HEAD)" = "$APPROVED_CONTROL_SHA"
+          git -C "$work/control" -c core.hooksPath=/dev/null checkout --quiet --detach FETCH_HEAD
+          test "$(git -C "$work/control" rev-parse HEAD)" = "$APPROVED_CONTROL_SHA"
+          test -z "$(git -C "$work/control" status --porcelain)"
+          python3 "$work/control/bootstrap/verify_bundle.py"
+          git init -q --bare "$work/base.git"
+          timeout 90s git -C "$work/base.git" -c core.hooksPath=/dev/null fetch --quiet --no-tags https://github.com/dst-red-Wire/ecommerce-1.git refs/heads/main
+          test "$(git -C "$work/base.git" rev-parse FETCH_HEAD)" = 29859406d056debcaab2c8fc7a353a00de987971
+          test ! -e "$work/base.git/objects/info/alternates"
+          test "$(sha256sum "$work/control/bootstrap/signer.asc" | cut -d " " -f1)" = de9dfd432533918e3f0cd6c4c5011247f42b58978df7e86744f754ca6c4c2e5c
+          mkdir -m 700 "$work/gnupg"
+          gpg --homedir "$work/gnupg" --batch --quiet --import "$work/control/bootstrap/signer.asc"
+          fingerprint="$(gpg --homedir "$work/gnupg" --batch --with-colons --list-keys | awk -F: '$1 == "fpr" {print $10}')"
+          test "$fingerprint" = D0E9857876048A4E303B4972BA1BD2FFE663316C
+      - name: Publish one exact bootstrap branch and draft PR
+        shell: bash
+        env:
+          APPROVED_CONTROL_SHA: ${{ vars.APPROVED_CONTROL_SHA }}
+          BOOTSTRAP_TARGET_PAT: ${{ secrets.BOOTSTRAP_TARGET_PAT }}
+        run: |
+          set -euo pipefail
+          test -n "$BOOTSTRAP_TARGET_PAT"
+          work="$RUNNER_TEMP/bootstrap-trusted"
+          python3 "$work/control/bootstrap/pat_publisher.py" --base-objects "$work/base.git/objects" --trusted-gnupg-home "$work/gnupg"
