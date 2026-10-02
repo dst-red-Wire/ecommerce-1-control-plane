@@ -1,0 +1,22 @@
+{
+  "base_sha": "29859406d056debcaab2c8fc7a353a00de987971",
+  "bundle_bytes": 87538,
+  "bundle_path": "bootstrap/source.bundle",
+  "bundle_sha256": "d1ac6d0b8bcb641e9dfe39090b3039c289a733005f8f38a19b4ed592712bfadc",
+  "control_default_branch": "main",
+  "control_repository": "dst-red-Wire/ecommerce-1-control-plane",
+  "dispatch_actor": "myname37",
+  "environment": "ecommerce-1-bootstrap-publisher",
+  "head_sha": "b1ac8599ba9f746a7c194359e04f17a890098723",
+  "publication_branch": "feat/controller-receipt-cutover",
+  "required_reviewer": "dst-red-Wire",
+  "schema": "bootstrap-intent/v1",
+  "signer_fingerprint": "D0E9857876048A4E303B4972BA1BD2FFE663316C",
+  "target_default_branch": "main",
+  "target_repository": "dst-red-Wire/ecommerce-1",
+  "tree_sha": "1424fcd7af8b626a84e533bf4eaf7e8678be8d22",
+  "work_item_issue": 188,
+  "work_item_issue_body_sha256": "7266035bab1c0df74bf4f288c9b093aecc38d129ca508dfd6a7f304cfebc9847",
+  "work_package_path": "config/work-packages/M7/m7-isolated-pr-bootstrap.yaml",
+  "work_package_sha256": "b9d7ca6bdd222337a5b350262037c101b79e4c0fa71b03d371346c813f1b491b"
+}
